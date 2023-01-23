@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User, auth
 from django.contrib import messages
-from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from .models import Profile, Post, LikePost, FollowersCount
 from itertools import chain
@@ -33,7 +32,7 @@ def index(request):
     user_following_all = []
 
     for user in user_following:
-        user_list = User.objects.get(id=user.user)
+        user_list = User.objects.get(id=user.user.id)
         user_following_all.append(user_list)
     
     new_suggestions_list = [x for x in list(all_users) if (x not in list(user_following_all))]
@@ -48,7 +47,7 @@ def index(request):
         username_profile.append(users.id)
 
     for ids in username_profile:
-        profile_lists = Profile.objects.filter(id_user=ids)
+        profile_lists = Profile.objects.filter(user_id=ids)
         username_profile_list.append(profile_lists)
 
     suggestions_username_profile_list = list(chain(*username_profile_list))
@@ -60,6 +59,7 @@ def index(request):
         'posts':feed_list, 
         'suggestions_username_profile_list': suggestions_username_profile_list[:4]
         })
+
 
 @login_required(login_url='signin')
 def upload(request):
@@ -93,7 +93,7 @@ def search(request):
             username_profile.append(users.id)
 
         for ids in username_profile:
-            profile_lists = Profile.objects.filter(id_user=ids)
+            profile_lists = Profile.objects.filter(user_id=ids)
             username_profile_list.append(profile_lists)
         
         username_profile_list = list(chain(*username_profile_list))
@@ -101,15 +101,16 @@ def search(request):
 
 @login_required(login_url='signin')
 def like_post(request):
-    username = request.user.username
+    user_object = User.objects.get(id=request.user.id)
+    user_profile = Profile.objects.get(user=user_object)
     post_id = request.GET.get('post_id')
 
     post = Post.objects.get(id=post_id)
 
-    like_filter = LikePost.objects.filter(post_id=post_id, username=username).first()
+    like_filter = LikePost.objects.filter(post_id=post_id, user=user_profile).first()
 
     if like_filter == None:
-        new_like = LikePost.objects.create(post_id=post_id, username=username)
+        new_like = LikePost.objects.create(post_id=post_id, user=user_profile)
         new_like.save()
         post.no_of_likes = post.no_of_likes+1
         post.save()
@@ -125,19 +126,19 @@ def profile(request, pk):
     user_object = User.objects.get(id=pk)
     user_profile = Profile.objects.get(user=user_object)
 
-    user_posts = Post.objects.filter(user=pk)
+    user_posts = Post.objects.filter(user=user_profile)
     user_post_length = len(user_posts)
 
-    follower = request.user.username
-    user = pk
+    follower_object = User.objects.get(id=request.user.id)
+    follower_profile = Profile.objects.get(user=follower_object)
 
-    if FollowersCount.objects.filter(follower=follower, user=user).first():
+    if FollowersCount.objects.filter(follower=follower_profile, user=user_profile).first():
         button_text = 'Unfollow'
     else:
         button_text = 'Follow'
 
-    user_followers = len(FollowersCount.objects.filter(user=pk))
-    user_following = len(FollowersCount.objects.filter(follower=pk))
+    user_followers = len(FollowersCount.objects.filter(follower=follower_profile))
+    user_following = len(FollowersCount.objects.filter(follower=user_profile))
 
     context = {
         'user_object': user_object,
@@ -155,13 +156,18 @@ def follow(request):
     if request.method == 'POST':
         follower = request.POST['follower']
         user_id = request.POST['user']
+        user_object = User.objects.get(id=user_id)
+        user_profile = Profile.objects.get(user=user_object)
 
-        if FollowersCount.objects.filter(follower=follower, user=user_id).first():
-            delete_follower = FollowersCount.objects.get(follower=follower, user=user_id)
+        follower_object = User.objects.get(id=follower)
+        follower_profile = Profile.objects.get(user=follower_object)
+
+        if FollowersCount.objects.filter(follower=follower_profile, user=user_profile).first():
+            delete_follower = FollowersCount.objects.get(follower=follower_profile, user=user_profile)
             delete_follower.delete()
             return redirect('/profile/'+user_id)
         else:
-            new_follower = FollowersCount.objects.create(follower=follower, user=user_id)
+            new_follower = FollowersCount.objects.create(follower=follower_profile, user=user_profile)
             new_follower.save()
             return redirect('/profile/'+user_id)
     else:
@@ -169,7 +175,8 @@ def follow(request):
 
 @login_required(login_url='signin')
 def settings(request):
-    user_profile = Profile.objects.get(user=request.user)
+    user_object = User.objects.get(id=request.user.id)
+    user_profile = Profile.objects.get(user=user_object)
 
     if request.method == 'POST':
         
@@ -220,7 +227,7 @@ def signup(request):
 
                 #create a Profile object for the new user
                 user_model = User.objects.get(username=username)
-                new_profile = Profile.objects.create(user=user_model, id_user=user_model.id)
+                new_profile = Profile.objects.create(user=user_model)
                 new_profile.save()
                 return redirect('settings')
         else:

@@ -203,9 +203,10 @@
                                             <img src="{% static 'assets/images/avatars/avatar-2.jpg' %}" class="bg-gray-200 border border-white rounded-full w-8 h-8">
                                         </div>
                                     </a> -->
-                                    <span class="block font-semibold "><a href="/profile/{{post.user}}">
-                                        <img src="{{post.user.profile_img.url}}"  alt="">
-                                        @{{post.user}}</a></span>
+                                    <span class="block font-semibold "><a href="/profile/{{post.user.id}}">
+                                        <img src="{{post.user.profile_img.url}}" class="bg-gray-200 rounded-full w-10 h-10"  alt="">
+                                        @{{post.user}}
+                                    </a></span>
                                 </div>
                               <div>
                                 <a href="#"> <i class="icon-feather-more-horizontal text-2xl hover:bg-gray-200 rounded-full p-2 transition -mr-1 "></i> </a>
@@ -355,7 +356,7 @@
                                 {% for suggestion in suggestions_username_profile_list %}
                                 <div class="flex items-center justify-between py-3">
                                     <div class="flex flex-1 items-center space-x-4">
-                                        <a href="/profile/{{suggestion.user}}">
+                                        <a href="/profile/{{suggestion.user.id}}">
                                             <img src="{{suggestion.profile_img.url}}" class="bg-gray-200 rounded-full w-10 h-10">
                                         </a>
                                         <div class="flex flex-col">
